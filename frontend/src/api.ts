@@ -1,4 +1,27 @@
-export const API = "http://localhost:8000";
+// On your laptop the API runs separately on :8000. Online, the same server serves both, so "".
+export const API = import.meta.env.DEV ? "http://localhost:8000" : "";
+
+export type Role = "admin" | "contributor";
+
+// The passcode is remembered in this browser so friends only type it once.
+const CODE_KEY = "urdu-tune-code";
+export function getCode(): string {
+  try {
+    return localStorage.getItem(CODE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+export function setCode(code: string) {
+  try {
+    if (code) localStorage.setItem(CODE_KEY, code);
+    else localStorage.removeItem(CODE_KEY);
+  } catch {
+    /* private mode: the code just won't be remembered */
+  }
+}
+// App listens for this and shows the passcode screen again.
+export const AUTH_EVENT = "urdu-tune-auth";
 
 export type ClipStatus = "needs_review" | "labelled" | "rejected";
 
@@ -74,10 +97,18 @@ export interface DatasetSummary {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(API + path, init);
+    const headers = new Headers(init?.headers);
+    const code = getCode();
+    if (code) headers.set("X-Access-Code", code);
+    res = await fetch(API + path, { ...init, headers });
   } catch {
-    throw new Error("Can't reach the backend. Is uvicorn running on port 8000?");
+    throw new Error(
+      import.meta.env.DEV
+        ? "Can't reach the backend. Is uvicorn running on port 8000?"
+        : "Can't reach the server. Check your internet and try again.",
+    );
   }
+  if (res.status === 401) window.dispatchEvent(new Event(AUTH_EVENT));
   if (!res.ok) {
     let message = `${res.status} ${res.statusText}`;
     try {
@@ -98,6 +129,7 @@ function json(method: string, body: unknown): RequestInit {
 }
 
 export const api = {
+  me: () => request<{ role: Role }>("/api/me"),
   listProjects: () => request<Project[]>("/api/projects"),
   getProject: (id: number) => request<Project>(`/api/projects/${id}`),
   createProject: (name: string, use_case: string) =>

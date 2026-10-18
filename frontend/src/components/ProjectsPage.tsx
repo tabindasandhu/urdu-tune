@@ -5,9 +5,10 @@ import type { Project } from "../api";
 
 interface Props {
   onOpen: (projectId: number) => void;
+  canCreate: boolean; // friends only record into existing projects
 }
 
-export default function ProjectsPage({ onOpen }: Props) {
+export default function ProjectsPage({ onOpen, canCreate }: Props) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,10 +19,13 @@ export default function ProjectsPage({ onOpen }: Props) {
   useEffect(() => {
     api
       .listProjects()
-      .then(setProjects)
+      .then((list) => {
+        setProjects(list);
+        if (!canCreate && list.length === 1) onOpen(list[0].id); // nothing to choose, go straight in
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [canCreate, onOpen]);
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -40,10 +44,13 @@ export default function ProjectsPage({ onOpen }: Props) {
   return (
     <div className="page">
       <h2>Projects</h2>
-      <p className="muted">One project = one use case. Its clips train one model.</p>
+      <p className="muted">
+        {canCreate ? "One project = one use case. Its clips train one model." : "Pick a project to record for."}
+      </p>
 
       {error && <p className="error">{error}</p>}
 
+      {canCreate && (
       <form className="card form" onSubmit={create}>
         <h3>New project</h3>
         <label>
@@ -62,6 +69,7 @@ export default function ProjectsPage({ onOpen }: Props) {
           {saving ? "Creating…" : "Create project"}
         </button>
       </form>
+      )}
 
       {loading ? (
         <p className="muted">Loading…</p>

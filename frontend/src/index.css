@@ -127,3 +127,13 @@ select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .status.needs_review { background: #fff7e6; color: #8a5a00; }
 .status.labelled { background: var(--accent-soft); color: var(--accent); }
 .status.rejected { background: var(--danger-soft); color: var(--danger); }
+/* ---------- online: sign-in, consent, ideas ---------- */
+.gate { max-width: 420px; margin: 40px auto; }
+.signout { margin-left: auto; }
+.consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: 0.9rem; cursor: pointer; }
+.consent input { width: auto; margin-top: 3px; }
+.ideas { margin: 8px 0 0; padding-right: 20px; line-height: 2; }
+@media (max-width: 600px) {
+  .app { padding: 12px; }
+  .tabs { flex-wrap: wrap; }
+}

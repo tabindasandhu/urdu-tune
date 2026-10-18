@@ -5,6 +5,7 @@ import { MAX_SECONDS, useRecorder } from "../useRecorder";
 
 interface Props {
   projectId: number;
+  contributor: boolean; // a friend recording through the shared link
   speaker: string;
   setSpeaker: (name: string) => void;
   onChanged: () => void; // tell the parent to refresh project stats
@@ -19,8 +20,9 @@ interface Upload {
 
 let nextKey = 1;
 
-export default function CollectTab({ projectId, speaker, setSpeaker, onChanged }: Props) {
+export default function CollectTab({ projectId, contributor, speaker, setSpeaker, onChanged }: Props) {
   const [uploads, setUploads] = useState<Upload[]>([]);
+  const [consent, setConsent] = useState(false);
   const recorder = useRecorder((audio) => {
     const ext = audio.type.includes("mp4") ? "m4a" : "webm"; // Safari records mp4, Chrome webm
     void upload(audio, `recording.${ext}`, "Recording");
@@ -49,6 +51,7 @@ export default function CollectTab({ projectId, speaker, setSpeaker, onChanged }
   }
 
   const noSpeaker = speaker.trim().length === 0;
+  const blocked = noSpeaker || !consent;
 
   return (
     <div className="tab">
@@ -60,12 +63,37 @@ export default function CollectTab({ projectId, speaker, setSpeaker, onChanged }
         <p className="muted small">
           We record the speaker so the test set can use voices the model never trained on.
         </p>
+        <label className="consent">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <span>
+            I agree that my voice recordings are stored privately and used to train an Urdu speech recognition
+            model.
+          </span>
+        </label>
       </div>
+
+      {contributor && (
+        <div className="card">
+          <h3>What to say</h3>
+          <p className="muted small">
+            Short sentences (2–10 seconds) a customer might say on a delivery call. Use these as ideas and say them in
+            your own words, with your own names, areas and numbers. Every recording should be a different sentence.
+          </p>
+          <ul className="ideas urdu" dir="rtl">
+            <li>جی ہاں، میرا آرڈر کنفرم کر دیں</li>
+            <li>میں یہ آرڈر کینسل کرنا چاہتی ہوں</li>
+            <li>میرا ایڈریس بدل دیں، گلی نمبر سات، ماڈل ٹاؤن</li>
+            <li>ڈیلیوری کب تک ہو جائے گی؟</li>
+            <li>پیسے کیش میں دوں گا، کتنے بنتے ہیں؟</li>
+            <li>رائیڈر کو کہیں شام کے بعد آئے</li>
+          </ul>
+        </div>
+      )}
 
       <div className="card record-box">
         <button
           className={`record ${recorder.recording ? "on" : ""}`}
-          disabled={noSpeaker}
+          disabled={blocked}
           onClick={recorder.recording ? recorder.stop : recorder.start}
         >
           {recorder.recording ? "■ Stop" : "● Record"}
@@ -74,7 +102,9 @@ export default function CollectTab({ projectId, speaker, setSpeaker, onChanged }
           {recorder.recording
             ? `${recorder.seconds.toFixed(1)}s / ${MAX_SECONDS}s`
             : noSpeaker
-              ? "Enter a speaker name first"
+              ? "Enter your name first"
+              : !consent
+                ? "Tick the consent box first"
               : "Say one short sentence from your use case"}
         </div>
         {recorder.recording && (
@@ -85,9 +115,9 @@ export default function CollectTab({ projectId, speaker, setSpeaker, onChanged }
         {recorder.error && <p className="error">{recorder.error}</p>}
 
         <div className="divider">or</div>
-        <label className={`file-btn ${noSpeaker ? "disabled" : ""}`}>
+        <label className={`file-btn ${blocked ? "disabled" : ""}`}>
           Upload audio files
-          <input type="file" accept="audio/*" multiple disabled={noSpeaker} onChange={pickFiles} hidden />
+          <input type="file" accept="audio/*" multiple disabled={blocked} onChange={pickFiles} hidden />
         </label>
       </div>
 
