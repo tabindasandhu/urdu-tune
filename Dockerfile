@@ -14,6 +14,7 @@ USER user
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
+    HF_HUB_DISABLE_XET=1 \
     DATA_DIR=/home/user/app/data \
     STATIC_DIR=/home/user/app/static
 WORKDIR /home/user/app
