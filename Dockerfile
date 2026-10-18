@@ -8,7 +8,7 @@ RUN npm run build
 
 # ---- 2. Python server that serves the API and the built site ----
 FROM python:3.12-slim
-# Hugging Face Spaces run containers as user 1000
+# Run as a normal user, not root
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
@@ -23,5 +23,6 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 COPY --chown=user backend/app ./app
 COPY --chown=user --from=web /web/dist ./static
 
+# Render tells the app which port to use through $PORT
 EXPOSE 7860
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]

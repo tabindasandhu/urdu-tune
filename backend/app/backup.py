@@ -40,17 +40,29 @@ class _Scheduler(CommitScheduler):
 
 
 def restore() -> None:
+    """Bring back the last backup. Refuses to start rather than start empty by mistake,
+    because an empty database would then be backed up over the good one."""
     if not BACKUP_REPO or DB_PATH.exists():
         return
+    api = HfApi(token=HF_TOKEN)
     try:
-        snapshot_download(BACKUP_REPO, repo_type="dataset", local_dir=DATA_DIR,
-                          allow_patterns=PATTERNS, token=HF_TOKEN)
+        api.whoami()
+    except Exception as exc:
+        raise RuntimeError("HF_TOKEN is missing or invalid. Paste a Write token that starts with hf_") from exc
+    try:
+        files = api.list_repo_files(BACKUP_REPO, repo_type="dataset")
     except RepositoryNotFoundError:
         log.info("No backup found in %s yet, starting empty", BACKUP_REPO)
         return
-    if SNAPSHOT.exists():
-        shutil.copy(SNAPSHOT, DB_PATH)
-        log.info("Restored database and audio from %s", BACKUP_REPO)
+    if "backup.db" not in files:
+        log.info("Backup repo %s has no database yet, starting empty", BACKUP_REPO)
+        return
+    snapshot_download(BACKUP_REPO, repo_type="dataset", local_dir=DATA_DIR,
+                      allow_patterns=PATTERNS, token=HF_TOKEN)
+    if not SNAPSHOT.exists():
+        raise RuntimeError(f"Could not download the backup from {BACKUP_REPO}. Not starting empty.")
+    shutil.copy(SNAPSHOT, DB_PATH)
+    log.info("Restored database and audio from %s", BACKUP_REPO)
 
 
 def start() -> None:
